@@ -177,7 +177,7 @@ export default class AMCLoader {
 			for (let i = FirstFrameNumber; i < frames.length; i++) {	
 				const frame = frames[i]
 				const t = TimePerFrame * i
-				if (!frame || !(typeof frame[bone.name] === "string" || frame[bone.name] instanceof String)) {
+				if (!frame || typeof frame[bone.name] !== "string") {
           continue
         }
 
