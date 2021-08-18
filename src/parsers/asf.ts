@@ -111,9 +111,8 @@ export class ASFParser {
     let currentKey
 
     while (index < lines.length) {
-      const line = lines[index].trim();
+      const line = lines[index]
       if (TOKEN_KEYWORD_RGX.test(line)) {
-        // KEYWORDS - :keyword
         const matches = line.match(TOKEN_KEYWORD_RGX)
         currentKey = matches?.[1]
         this.tokens.push({
