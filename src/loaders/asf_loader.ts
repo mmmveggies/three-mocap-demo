@@ -125,7 +125,7 @@ export default class ASFLoader {
 
 		skeleton.bonedata.findByName = function (name) {
 			for (var i = 0; i < skeleton.bonedata.length; i++)
-				if (skeleton.bonedata[i].name == name) return skeleton.bonedata[i];
+				if (skeleton.bonedata[i].name === name) return skeleton.bonedata[i];
 		};
 		skeleton.hierarchy.findByName = function (name) {
 			return skeleton.hierarchy[name];
