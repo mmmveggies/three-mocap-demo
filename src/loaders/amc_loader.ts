@@ -79,8 +79,7 @@ export default class AMCLoader {
 			lineNum++
 		}
 
-		var tracks = [];
-
+		const tracks: any[] = []
 
 		function getAxis(bone: any) {
 			if (!bone.userData.axis) {
@@ -197,9 +196,9 @@ export default class AMCLoader {
 				keys.quaternion.push({
 					time: t,
 					value: new THREE.Quaternion()
-									.multiply(bone.userData.parentRotation.clone().inverse()) //back to world space rotation
-									.multiply(animationQuaternion)
-									.multiply(bone.userData.rotation) //to bone space (bone is along the positive z-axis)
+						.multiply(bone.userData.parentRotation.clone().inverse()) //back to world space rotation
+						.multiply(animationQuaternion)
+						.multiply(bone.userData.rotation) //to bone space (bone is along the positive z-axis)
 				})
 
 				keys.translation.push({
@@ -211,7 +210,6 @@ export default class AMCLoader {
 					time: t,
 					value: scale
 				})
-
 			}
 
 			if (keys.quaternion.length === 0) {
