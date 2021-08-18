@@ -2,23 +2,20 @@
 import * as THREE from 'three'
 
 export default class ASFLoader {
-  constuctor(
+  constructor(
     public manager = THREE.DefaultLoadingManager,
   ) {}
 
-  setCrossOrigin(value) {
-    this.crossOrigin = value
+  async load(url: string) {
+    const loader = new THREE.FileLoader()
+    return new Promise<THREE.AnimationClip>((resolve, reject) => {
+      loader.load(url, (text) => {
+        resolve(this.parse(String(text)))
+      }, undefined, reject)
+    })
   }
 
-  load(url, onLoad, onProgress, onError) {
-		const loader = new THREE.XHRLoader(this.manager)
-		loader.setCrossOrigin(this.crossOrigin)
-		loader.load(url, (text) => {
-			onLoad(this.parse(text))
-		}, onProgress, onError)
-  }
-
-	parse(text: string) {
+  private parse(text: string): THREE.AnimationClip {
 		var lines = text.split('\n');
 		var lineNum = 0;
 

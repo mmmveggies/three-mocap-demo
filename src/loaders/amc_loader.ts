@@ -1,6 +1,6 @@
 // from https://raw.githubusercontent.com/bailus/Threejs-asf-amc-loader/master/amcLoader.js
 
-import THREE from 'three'
+import * as THREE from 'three'
 
 function isNumeric(v: any): v is number {
   return !isNaN(v)
@@ -16,12 +16,12 @@ export default class AMCLoader {
     const loader = new THREE.FileLoader()
     return new Promise<THREE.AnimationClip>((resolve, reject) => {
       loader.load(url, (text) => {
-        resolve(this.#parse(String(text)))
+        resolve(this.parse(String(text)))
       }, undefined, reject)
     })
   }
 
-  #parse(text: string): THREE.AnimationClip {
+  private parse(text: string): THREE.AnimationClip {
 		const lines = text.split('\n');
 		let lineNum = 0;
 
