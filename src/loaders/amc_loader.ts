@@ -138,7 +138,7 @@ export default class AMCLoader {
 			for (let i = 0; i < order.length; i++) {
 				const m = new THREE.Matrix4()
 				const s = order[i].trim().toLowerCase()
-			  const d = +data[i]
+        const d = +data[i]
 				const r = angleToRadians(d)
 
 				if (s.length === 2) {
@@ -217,11 +217,12 @@ export default class AMCLoader {
 			if (keys.quaternion.length === 0) {
         continue
       }
-			const track = new THREE.QuaternionKeyframeTrack(bone.uuid + '.quaternion', keys.quaternion)
+      // TODO: fix last arg
+			const track = new THREE.QuaternionKeyframeTrack(bone.uuid + '.quaternion', keys.quaternion, [])
 			tracks.push(track)
 		}
 
-		const animationClip = new THREE.AnimationClip(this.name, TimePerFrame*frames.length, tracks)
+		const animationClip = new THREE.AnimationClip(this.name, TimePerFrame * frames.length, tracks)
 		return animationClip
   }
 }
