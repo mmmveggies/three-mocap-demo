@@ -94,6 +94,7 @@ export default class AMCLoader {
 			return quaternion
 		}
 
+    /*
 		function getRotation(bone: any, frameData: any) {
 			const quaternion = new THREE.Quaternion();
 			let x: number | undefined, y: number | undefined, z: number | undefined
@@ -104,9 +105,9 @@ export default class AMCLoader {
       }
 			const dof = bone.userData.dof.trim().split(' ')
 			for (let i = 0; i < dof.length; i++) {
-				if (dof[i] == 'rx') { x = frameData[i]; order += 'X'; }
-				if (dof[i] == 'ry') { y = frameData[i]; order += 'Y'; }
-				if (dof[i] == 'rz') { z = frameData[i]; order += 'Z'; }
+				if (dof[i] === 'rx') { x = frameData[i]; order += 'X'; }
+				if (dof[i] === 'ry') { y = frameData[i]; order += 'Y'; }
+				if (dof[i] === 'rz') { z = frameData[i]; order += 'Z'; }
 			}
 			if (x === undefined) { x = 0; order += 'X'; }
 			if (y === undefined) { y = 0; order += 'Y'; }
@@ -115,6 +116,7 @@ export default class AMCLoader {
 			quaternion.setFromEuler(euler)
 			return quaternion
 		}
+    */
 
 		/*
 			order: a string from the dof or order fields in the amc file, eg. "TX TY TZ RX RY RZ" or "rx ry rz"
@@ -139,14 +141,14 @@ export default class AMCLoader {
 			  const d = +data[i]
 				const r = angleToRadians(d)
 
-				if (s.length == 2) {
+				if (s.length === 2) {
           transform.multiplyMatrices(
-            s == 'rx' ? m.makeRotationX(r) :
-            s == 'ry' ? m.makeRotationY(r) :
-            s == 'rz' ? m.makeRotationZ(r) :
-            s == 'tx' ? m.makeTranslation(d,0,0) :
-            s == 'ty' ? m.makeTranslation(0,d,0) :
-            s == 'tz' ? m.makeTranslation(0,0,d) :
+            s === 'rx' ? m.makeRotationX(r) :
+            s === 'ry' ? m.makeRotationY(r) :
+            s === 'rz' ? m.makeRotationZ(r) :
+            s === 'tx' ? m.makeTranslation(d,0,0) :
+            s === 'ty' ? m.makeTranslation(0,d,0) :
+            s === 'tz' ? m.makeTranslation(0,0,d) :
             m,
             transform,
           )
