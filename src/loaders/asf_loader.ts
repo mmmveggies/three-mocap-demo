@@ -19,7 +19,7 @@ export default class ASFLoader {
   }
 
   private parse(text: string | ArrayBuffer): THREE.AnimationClip {
-		const lines = String(text).split('\n')
+		const lines = String(text).split('\n').map((l) => l.trim())
 		let lineNum = 0
 
 		function parseKeyValueMap() {
