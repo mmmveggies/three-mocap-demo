@@ -8,4 +8,3 @@ mkdir -p $TMP_DIR
 cd $TMP_DIR
 curl http://mocap.cs.cmu.edu/allasfamc.zip > mocap.zip
 unzip mocap.zip && rm mocap.zip
-rm mocap.zip
