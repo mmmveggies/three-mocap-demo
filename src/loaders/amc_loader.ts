@@ -2,8 +2,15 @@
 
 import * as THREE from 'three'
 
+const TimePerFrame = 1 / 120
+const FirstFrameNumber = 1
+
 function isNumeric(v: any): v is number {
   return !isNaN(v)
+}
+
+function angleToRadians(x: number) {
+  return Math.PI * x / 180
 }
 
 export default class AMCLoader {
@@ -22,84 +29,81 @@ export default class AMCLoader {
   }
 
   private parse(text: string): THREE.AnimationClip {
-		const lines = text.split('\n');
-		let lineNum = 0;
+		const lines = text.split('\n')
+		let lineNum = 0
 
-		var parseKeyValueMap = function () {
-			var map = {};
+    function parseKeyValueMap () {
+      const map: Record<string, string> = {}
 			while (lineNum < lines.length) {
-				var line = lines[lineNum].trim();
+				const line = lines[lineNum].trim()
 				
-				if (isNumeric(line) || lineNum >= lines.length) break;
+				if (isNumeric(line) || lineNum >= lines.length) {
+          break
+        }
 
-				var indexOfSpaceChar = line.indexOf(' ');
-				if (indexOfSpaceChar === -1) continue;
+				const indexOfSpaceChar = line.indexOf(' ');
+				if (indexOfSpaceChar === -1) {
+          continue
+        }
 				map[line.slice(0, indexOfSpaceChar)] = line.slice(indexOfSpaceChar+1)
-
-				lineNum++;
+				lineNum++
 			}
-			return map;
+			return map
 		};
 
-		var flags = [];
-		var frames = [];
+		const flags: string[] = []
+		const frames: Array<Record<string, string>> = []
 
-		var parseFlag = function (line) {
-			lineNum++;
-			flags.push(line.slice(1).trim());
-		};
-		var parseFrame = function (line) {
-			lineNum++;
-			frames[parseFloat(line)] = parseKeyValueMap();
-		};
+		function parseFlag(line: string) {
+			lineNum++
+			flags.push(line.slice(1).trim())
+		}
+		function parseFrame(line: string) {
+			lineNum++
+			frames[parseFloat(line)] = parseKeyValueMap()
+		}
 
-		console.log("	parsing")
 		while (lineNum < lines.length) {
-
-			var line = lines[lineNum].trim();
+			const line = lines[lineNum].trim();
 
 			if (line.charAt(0) === ':') {
-				parseFlag(line);
-				continue;
+				parseFlag(line)
+				continue
 			}
 
 			if (isNumeric(line)) {
-				parseFrame(line);
-				continue;
+				parseFrame(line)
+				continue
 			}
 
-			lineNum++;
-
-		};
-
-		console.log('	creating animation')
+			lineNum++
+		}
 
 		var tracks = [];
 
-		var TimePerFrame = 1/120;
-		var FirstFrameNumber = 1;
 
-		var angleToRadians = function (x) {
-			return Math.PI * x / 180;
-		};
+		function getAxis(bone: any) {
+			if (!bone.userData.axis) {
+        return new THREE.Quaternion()
+      }
+			const axis = bone.userData.axis.trim().split(' ')
+			const order = axis.pop()
+			const euler = new THREE.Euler(angleToRadians(axis[0]), angleToRadians(axis[1]), angleToRadians(axis[2]), order)
+			const quaternion = new THREE.Quaternion()
+			quaternion.setFromEuler(euler)
+			return quaternion
+		}
 
-		var getAxis = function (bone) { /* returns THREE.Quaternion */
-			if (!bone.userData.axis) return new THREE.Quaternion();
-			var axis = bone.userData.axis.trim().split(' ');
-			var order = axis.pop();
-			var euler = new THREE.Euler(angleToRadians(axis[0]), angleToRadians(axis[1]), angleToRadians(axis[2]), order);
-			var quaternion = new THREE.Quaternion();
-			quaternion.setFromEuler(euler);
-			return quaternion;
-		};
+		function getRotation(bone: any, frameData: any) {
+			const quaternion = new THREE.Quaternion();
+			let x: number | undefined, y: number | undefined, z: number | undefined
+			let order = '';
 
-		var getRotation = function (bone, frameData) { /* returns THREE.Quaternion */
-			var x, y, z;
-			var order = '';
-			var quaternion = new THREE.Quaternion();
-			if (!bone.userData.dof) return quaternion;
-			var dof = bone.userData.dof.trim().split(' ');
-			for (var i = 0; i < dof.length; i++) {
+			if (!bone.userData.dof) {
+        return quaternion
+      }
+			const dof = bone.userData.dof.trim().split(' ')
+			for (let i = 0; i < dof.length; i++) {
 				if (dof[i] == 'rx') { x = frameData[i]; order += 'X'; }
 				if (dof[i] == 'ry') { y = frameData[i]; order += 'Y'; }
 				if (dof[i] == 'rz') { z = frameData[i]; order += 'Z'; }
@@ -107,74 +111,86 @@ export default class AMCLoader {
 			if (x === undefined) { x = 0; order += 'X'; }
 			if (y === undefined) { y = 0; order += 'Y'; }
 			if (z === undefined) { z = 0; order += 'Z'; }
-			var euler = new THREE.Euler(angleToRadians(x), angleToRadians(y), angleToRadians(z), order);
-			quaternion.setFromEuler(euler);
-			return quaternion;
-		};
+			const euler = new THREE.Euler(angleToRadians(x), angleToRadians(y), angleToRadians(z), order)
+			quaternion.setFromEuler(euler)
+			return quaternion
+		}
 
 		/*
 			order: a string from the dof or order fields in the amc file, eg. "TX TY TZ RX RY RZ" or "rx ry rz"
 			data: a string of space seperated numbers corresponding to the transformations above
 			returns a 4x4 transformation matrix (THREE.Matrix4)
 		*/
-		var getTransform = function (order, data) {
-			var transform = new THREE.Matrix4();
+		function getTransform(order?: string, data?: string) {
+			const transform = new THREE.Matrix4()
+			if (!order || !data) {
+        return transform
+      }
 
-			if (!order || !data) return transform;
-			order = order.trim().split(' ');
-			data = data.trim().split(' ');
-			if (order.length !== data.length) return transform;
+			const orders = order.trim().split(' ')
+			const datas = data.trim().split(' ')
+			if (orders.length !== datas.length) {
+        return transform
+      }
 
-			for (var i = 0; i < order.length; i++) {
-				var m = new THREE.Matrix4(),
-					s = order[i].trim().toLowerCase(),
-					d = data[i],
-					r = d * Math.PI / 180;
+			for (let i = 0; i < order.length; i++) {
+				const m = new THREE.Matrix4()
+				const s = order[i].trim().toLowerCase()
+			  const d = +data[i]
+				const r = angleToRadians(d)
 
-				if (s.length == 2) transform.multiplyMatrices(
-					s == 'rx' ? m.makeRotationX(r) :
-					s == 'ry' ? m.makeRotationY(r) :
-					s == 'rz' ? m.makeRotationZ(r) :
-					s == 'tx' ? m.makeTranslation(d,0,0) :
-					s == 'ty' ? m.makeTranslation(0,d,0) :
-					s == 'tz' ? m.makeTranslation(0,0,d) :
-					m, transform);
+				if (s.length == 2) {
+          transform.multiplyMatrices(
+            s == 'rx' ? m.makeRotationX(r) :
+            s == 'ry' ? m.makeRotationY(r) :
+            s == 'rz' ? m.makeRotationZ(r) :
+            s == 'tx' ? m.makeTranslation(d,0,0) :
+            s == 'ty' ? m.makeTranslation(0,d,0) :
+            s == 'tz' ? m.makeTranslation(0,0,d) :
+            m,
+            transform,
+          )
+        }
 			}
 			
-			return transform;
-		};
+			return transform
+		}
 
-		this.bones[0].updateMatrixWorld();
+		this.bones[0].updateMatrixWorld()
 
-		for (var j = 0; j < this.bones.length; j++) {
-			var bone = this.bones[j];
+		for (let j = 0; j < this.bones.length; j++) {
+			const bone = this.bones[j];
 
-			if (!bone || !bone.userData || !bone.userData.axis) continue;
+			if (!bone || !bone.userData || !bone.userData.axis) {
+        continue
+      }
 
-			var keys = {
-				translation: [],
-				quaternion: [],
-				scale: []
-			};
+			const keys = {
+				translation: [] as any[],
+				quaternion: [] as any[],
+				scale: [] as any[],
+			}
 
-			var axis = getAxis(bone);
-			var inverseAxis = axis.clone().conjugate();
+			const axis = getAxis(bone)
+			const inverseAxis = axis.clone().conjugate()
 
-			for (var i = FirstFrameNumber; i < frames.length; i++) {	
-				var frame = frames[i],
-					t = TimePerFrame * i;
-				if (!frame || !(typeof frame[bone.name] === "string" || frame[bone.name] instanceof String)) continue;
+			for (let i = FirstFrameNumber; i < frames.length; i++) {	
+				const frame = frames[i]
+				const t = TimePerFrame * i
+				if (!frame || !(typeof frame[bone.name] === "string" || frame[bone.name] instanceof String)) {
+          continue
+        }
 
-				var translation = new THREE.Vector3(),
-					quaternion = new THREE.Quaternion(),
-					scale = new THREE.Vector3();
+				const translation = new THREE.Vector3()
+				const quaternion = new THREE.Quaternion()
+				const scale = new THREE.Vector3()
 					
 				getTransform(bone.userData.dof, frame[bone.name]).decompose(translation, quaternion, scale);
 
-				var animationQuaternion = new THREE.Quaternion()
+				const animationQuaternion = new THREE.Quaternion()
 					.multiply(axis)
 					.multiply(quaternion)
-					.multiply(inverseAxis);
+					.multiply(inverseAxis)
 
 				keys.quaternion.push({
 					time: t,
@@ -182,27 +198,28 @@ export default class AMCLoader {
 									.multiply(bone.userData.parentRotation.clone().inverse()) //back to world space rotation
 									.multiply(animationQuaternion)
 									.multiply(bone.userData.rotation) //to bone space (bone is along the positive z-axis)
-				});
+				})
 
 				keys.translation.push({
 					time: t,
 					value: translation
-				});
+				})
 
 				keys.scale.push({
 					time: t,
 					value: scale
-				});
+				})
 
 			}
 
-			if (keys.quaternion.length === 0) continue;
-			var track = new THREE.QuaternionKeyframeTrack(bone.uuid + '.quaternion', keys.quaternion);
-			tracks.push(track);
+			if (keys.quaternion.length === 0) {
+        continue
+      }
+			const track = new THREE.QuaternionKeyframeTrack(bone.uuid + '.quaternion', keys.quaternion)
+			tracks.push(track)
 		}
 
-		var animationClip = new THREE.AnimationClip(this.name, TimePerFrame*frames.length, tracks);
-		console.log('	finished')
+		const animationClip = new THREE.AnimationClip(this.name, TimePerFrame*frames.length, tracks)
 		return animationClip
   }
 }
