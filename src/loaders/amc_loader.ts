@@ -171,17 +171,17 @@ export default class AMCLoader {
 					
 				getTransform(bone.userData.dof, frame[bone.name]).decompose(translation, quaternion, scale);
 
-				var animationQuaternion = new THREE.Quaternion().
-					multiply(axis).
-					multiply(quaternion).
-					multiply(inverseAxis);
+				var animationQuaternion = new THREE.Quaternion()
+					.multiply(axis)
+					.multiply(quaternion)
+					.multiply(inverseAxis);
 
 				keys.quaternion.push({
 					time: t,
-					value: new THREE.Quaternion().
-									multiply(bone.userData.parentRotation.clone().inverse()). //back to world space rotation
-									multiply(animationQuaternion).
-									multiply(bone.userData.rotation) //to bone space (bone is along the positive z-axis)
+					value: new THREE.Quaternion()
+									.multiply(bone.userData.parentRotation.clone().inverse()) //back to world space rotation
+									.multiply(animationQuaternion)
+									.multiply(bone.userData.rotation) //to bone space (bone is along the positive z-axis)
 				});
 
 				keys.translation.push({

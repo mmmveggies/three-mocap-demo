@@ -138,8 +138,8 @@ export default class ASFLoader {
 
 		var bones = [];
 		var makeBone = function (name, position, parentRotation) {
-			parentRotation = parentRotation || new THREE.Quaternion;
-			position = position || new THREE.Vector3;
+			parentRotation = parentRotation || new THREE.Quaternion();
+			position = position || new THREE.Vector3();
 
 			var data = skeleton.bonedata.findByName(name);
 			if (!data) return;
@@ -164,8 +164,8 @@ export default class ASFLoader {
 
 			var endOfBone = new THREE.Vector3(0, 0, data.length);
 
-			(skeleton.hierarchy.findByName(name) || '').split(' ').
-				forEach(function (childName) {
+			(skeleton.hierarchy.findByName(name) || '').split(' ')
+				.forEach(function (childName) {
 					var childBone = makeBone(childName, endOfBone, rotation.clone());
 					if (childBone) bone.add(childBone);
 				});
