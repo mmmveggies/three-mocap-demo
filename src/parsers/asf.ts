@@ -103,12 +103,12 @@ export class ASFParser {
     action: null,
   };
 
-  tokenize(data: string | ArrayBuffer) {
-    const lines = data.toString().split('\n')
-    let index = 0
-    this.tokens = []
+  tokenize(data: string | ArrayBuffer): ASFToken[] {
+    const tokens: ASFToken[] = []
+    const lines = data.toString().split('\n').map((l) => l.trim())
 
-    let currentKey;
+    let index = 0
+    let currentKey
 
     while (index < lines.length) {
       const line = lines[index].trim();
