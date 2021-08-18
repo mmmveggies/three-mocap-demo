@@ -22,7 +22,7 @@ export default class AMCLoader {
   async load(url: string) {
     const loader = new THREE.FileLoader()
     return new Promise<THREE.AnimationClip>((resolve, reject) => {
-      loader.load(url, (text) => resolve(this.parse(text)), undefined, reject)
+      loader.load(url, (d) => resolve(this.parse(d)), undefined, reject)
     })
   }
 
@@ -158,7 +158,7 @@ export default class AMCLoader {
 		this.bones[0].updateMatrixWorld()
 
 		for (let j = 0; j < this.bones.length; j++) {
-			const bone = this.bones[j];
+			const bone = this.bones[j]
 
 			if (!bone || !bone.userData || !bone.userData.axis) {
         continue

@@ -14,7 +14,7 @@ export default class ASFLoader {
   async load(url: string) {
     const loader = new THREE.FileLoader()
     return new Promise<THREE.AnimationClip>((resolve, reject) => {
-      loader.load(url, (text) => resolve(this.parse(text)), undefined, reject)
+      loader.load(url, (d) => resolve(this.parse(d)), undefined, reject)
     })
   }
 
