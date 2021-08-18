@@ -22,14 +22,12 @@ export default class AMCLoader {
   async load(url: string) {
     const loader = new THREE.FileLoader()
     return new Promise<THREE.AnimationClip>((resolve, reject) => {
-      loader.load(url, (text) => {
-        resolve(this.parse(String(text)))
-      }, undefined, reject)
+      loader.load(url, (text) => resolve(this.parse(text)), undefined, reject)
     })
   }
 
-  private parse(text: string): THREE.AnimationClip {
-		const lines = text.split('\n')
+  private parse(text: string | ArrayBuffer): THREE.AnimationClip {
+		const lines = String(text).split('\n')
 		let lineNum = 0
 
     function parseKeyValueMap () {
