@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { BVHLoader } from 'three/examples/jsm/loaders/BVHLoader'
+
 // import Stats from 'three/examples/jsm/libs/stats.module'
-import AMCLoader from './loaders/amc_loader'
-import ASFLoader from './loaders/asf_loader'
 
 function setup() {
   const { innerWidth: w, innerHeight: h } = window
@@ -40,18 +40,22 @@ function setup() {
   let mixer: THREE.AnimationMixer
   let mesh: THREE.Mesh
 
-  const asfLoader = new ASFLoader()
-  asfLoader.load('public/1234.asf').then((bones) => {
-    mesh = createMesh(bones)
-    scene.add(mesh)
+  const loader = new BVHLoader()
+  loader.load('bvh/01/01_bvh', (result) => {
 
-    mixer = new THREE.AnimationMixer(mesh);
-    //renderer.render(scene, camera);
+    skeletonHelper = new THREE.SkeletonHelper( result.skeleton.bones[ 0 ] );
+    //@ts-expect-error
+    skeletonHelper.skeleton = result.skeleton; // allow animation mixer to bind to THREE.SkeletonHelper directly
 
-    const amcLoader = new AMCLoader(bones, 'priman.amc')
-    amcLoader.load('priman.amc').then((animation) => {
-      // mixer.addAction(new THREE.AnimationAction(animation))
-    })
+    const boneContainer = new THREE.Group();
+    boneContainer.add( result.skeleton.bones[ 0 ] );
+
+    scene.add( skeletonHelper );
+    scene.add( boneContainer );
+
+    // play animation
+    mixer = new THREE.AnimationMixer( skeletonHelper );
+    mixer.clipAction( result.clip ).setEffectiveWeight( 1.0 ).play();
   })
 
   /*
