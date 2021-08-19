@@ -25,12 +25,8 @@ export class AMCParser {
     playInterval: null,
   };
 
-  /**
-   * Sets the AMC human-readable name.
-   * @param {String} name new AMC file name
-   */
-  setName(name) {
-    this.metadata.name = name;
+  setName(name: string) {
+    this.metadata.name = name
   }
 
   /**
@@ -39,7 +35,7 @@ export class AMCParser {
    * @param {String} raw_file or a string from an AMC file
    * @returns {Array} processed tokens
    */
-  tokenize(raw_file) {
+  tokenize(raw_file: string) {
     const lines = raw_file.split("\n");
     let index = 0;
     this.tokens = [];

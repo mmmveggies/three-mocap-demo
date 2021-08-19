@@ -12,18 +12,114 @@ const TOKEN_TUPLE_RGX = /(\w+\s)?\(((?:\s?[\d.e-]+)+)\)/
 
 export enum ASFTokenType {
   KEYWORD = 'KEYWORD',
-  PROPERTY = 'PROPERTY',
   COMMENT = 'COMMENT',
   RELATION = 'RELATION',
   BEGIN = 'BEGIN',
   END = 'END',
-  STRING = 'STRING',
   WHITESPACE = 'WHITESPACE',
+  STRING = 'STRING',
+  PROPERTY = 'PROPERTY',
 }
 
 export interface ASFToken {
   type: ASFTokenType
   words: string[]
+}
+
+function tokenize(data: string | ArrayBuffer): ASFToken[] {
+  const lines = data.toString().split('\n').map((l) => l.trim())
+
+  const tokens: ASFToken[] = []
+  function push(type: ASFTokenType, words: string | string[] = []) {
+    words = Array.isArray(words) ? words : [words]
+    tokens.push({ type, words })
+  }
+
+  let index = 0
+  let currentKey: string | undefined
+  
+  const isNotEOF = () => index >= lines.length
+
+  const nextLine = () => index++
+
+  const currLine = () => lines[index]
+
+  const currLineMatch = (reg: RegExp) => currLine().match(reg)
+
+  const currLineSplit = (reg = /,?\s+/) => currLine().split(reg)
+
+  while (isNotEOF()) {
+    const matchKeyword = currLineMatch(TOKEN_KEYWORD_RGX)
+    if (matchKeyword) {
+      currentKey = matchKeyword[1]
+      const words = !matchKeyword[2] ? [matchKeyword[1]] : matchKeyword.slice(1)
+      push(ASFTokenType.KEYWORD, words)
+      switch(currentKey) {
+      case 'documentation':
+        nextLine()
+        while (isNotEOF() && !currLineMatch(TOKEN_KEYWORD_RGX)) {
+          push(ASFTokenType.STRING, [currLine()])
+          nextLine()
+        }
+        break;
+      case 'root':
+      case 'units':
+        nextLine()
+        while(isNotEOF() && !currLineMatch(TOKEN_KEYWORD_RGX)) {
+          push(ASFTokenType.PROPERTY, currLineSplit())
+          nextLine()
+        }
+      }
+      continue 
+    }
+    
+    const matchComment = currLineMatch(TOKEN_COMMENT_RGX)
+    if (matchComment) {
+      push(ASFTokenType.COMMENT, matchComment.slice(1))
+      nextLine()
+      continue
+    }
+
+    if (currLineMatch(TOKEN_BEGIN_RGX)) {
+      push(ASFTokenType.BEGIN, 'begin')
+      // Begin reading until the end!
+      nextLine()
+      while (isNotEOF() && !currLineMatch(TOKEN_END_RGX)) {
+        switch (currentKey) {
+        case 'hierarchy':
+          push(ASFTokenType.RELATION, currLineSplit())
+          break
+        case 'documetation':
+          const [prop] = currLineSplit()
+          if (prop === 'limits' && currLineMatch(TOKEN_TUPLE_RGX)) {
+            const tuples: string[] = []
+            while (isNotEOF() && currLineMatch(TOKEN_TUPLE_RGX) && !currLineMatch(TOKEN_END_RGX)) {
+              const [,,element] = currLineMatch(TOKEN_TUPLE_RGX)!
+              tuples.push(element)
+              nextLine()
+            }
+          } else {
+            push(ASFTokenType.PROPERTY, currLineSplit())
+          }
+        }
+        nextLine()
+      }
+      continue
+    }
+    
+
+    if (currLineMatch(TOKEN_END_RGX)) {
+      push(ASFTokenType.END, 'end')
+    } else if (currLineMatch(TOKEN_WHITESPACE_RGX)) {
+      push(ASFTokenType.WHITESPACE)
+    } else {
+      // Unknown tokens are parsed as strings
+      push(ASFTokenType.STRING, currLine())
+    }
+    nextLine()
+  }
+
+  return tokens
 }
 
 export class ASFParser {
@@ -103,119 +199,6 @@ export class ASFParser {
     action: null,
   };
 
-  tokenize(data: string | ArrayBuffer): ASFToken[] {
-    const tokens: ASFToken[] = []
-    const lines = data.toString().split('\n').map((l) => l.trim())
-
-    let index = 0
-    let currentKey
-
-    while (index < lines.length) {
-      const line = lines[index]
-      if (TOKEN_KEYWORD_RGX.test(line)) {
-        const matches = line.match(TOKEN_KEYWORD_RGX)
-        currentKey = matches?.[1]
-        this.tokens.push({
-          type: ASFTokenType.KEYWORD,
-          words: !matches[2] ? [matches[1]] : matches.slice(1),
-        });
-
-        if (currentKey == "documentation") {
-          // Interpret all as string until next keyword.
-          index++;
-          while (
-            index < lines.length &&
-            !this.TOKEN_KEYWORD_RGX.test(lines[index].trim())
-          ) {
-            this.tokens.push({ type: "STRING", words: [lines[index].trim()] });
-            index++;
-          }
-          continue;
-        } else if (currentKey == "root" || currentKey == "units") {
-          // Interpret all as properties until next keyword.
-          index++;
-          while (
-            index < lines.length &&
-            !this.TOKEN_KEYWORD_RGX.test(lines[index].trim())
-          ) {
-            this.tokens.push({
-              type: "PROPERTY",
-              words: lines[index].trim().split(/,?\s+/),
-            });
-            index++;
-          }
-          continue;
-        }
-      } else if (this.TOKEN_COMMENT_RGX.test(line)) {
-        // COMMENTS - # comment
-        this.tokens.push({
-          type: "COMMENT",
-          words: line.match(this.TOKEN_COMMENT_RGX).slice(1),
-        });
-      } else if (this.TOKEN_BEGIN_RGX.test(line)) {
-        // BEGIN TOKEN - begin
-        this.tokens.push({ type: "BEGIN", words: ["begin"] });
-
-        // Begin reading until the end!
-        index++;
-        while (
-          index < lines.length &&
-          !this.TOKEN_END_RGX.test(lines[index].trim())
-        ) {
-          if (currentKey == "hierarchy") {
-            // Interpret as relations.
-            this.tokens.push({
-              type: "RELATION",
-              words: lines[index].trim().split(/,?\s+/),
-            });
-          } else if (currentKey != "documentation") {
-            // Interpret as properties.
-            const props = lines[index].trim().split(/,?\s+/);
-            if (
-              props[0] == "limits" &&
-              this.TOKEN_TUPLE_RGX.test(lines[index].trim())
-            ) {
-              // Start consuming tuples
-              let tuples = [];
-
-              while (
-                index < lines.length &&
-                this.TOKEN_TUPLE_RGX.test(lines[index].trim()) &&
-                !this.TOKEN_END_RGX.test(lines[index].trim())
-              ) {
-                tuples.push(lines[index].trim().match(this.TOKEN_TUPLE_RGX)[2]);
-                index++;
-              }
-
-              this.tokens.push({ type: "PROPERTY", words: ["limits", tuples] });
-              continue;
-            } else {
-              this.tokens.push({
-                type: "PROPERTY",
-                words: lines[index].trim().split(/,?\s+/),
-              });
-            }
-          }
-          index++;
-        }
-        continue;
-      } else if (this.TOKEN_END_RGX.test(line)) {
-        // END TOKEN - end
-        this.tokens.push({ type: "END", words: ["end"] });
-      } else if (this.TOKEN_WHITESPACE_RGX.test(line)) {
-        // WHITESPACE TOKEN -
-        this.tokens.push({ type: "WHITESPACE", words: [] });
-      } else {
-        // Unknown tokens are parsed as strings
-        this.tokens.push({ type: "STRING", words: [line] });
-      }
-      index++;
-    }
-
-    console.timeEnd("tokenize");
-
-    return this.tokens;
-  }
 
   /**
    * Processes the current set of tokens.
